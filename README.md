@@ -7,5 +7,9 @@ Assume an AWS role with access to cost explorer, then:
 python3 -m venv env
 source env/bin/activate
 pip install -r requirements.txt
+
 python main.py
+
+## or
+python main.py --end-date 2025-12-20
 ```
