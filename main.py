@@ -58,21 +58,31 @@ def get_cost_and_usage(start_date, end_date, filter=None, group_by=None):
     return client.get_cost_and_usage(**kwargs)
 
 
-def get_total_cost(response, metric="UnblendedCost"):
+def get_total_cost(response):
     total_cost = 0
-    for result in response.get("ResultsByTime"):
-        total_cost += float(result["Total"][metric]["Amount"])
+    for result in response["ResultsByTime"]:
+        total_cost += float(result["Total"]["UnblendedCost"]["Amount"])
     return round(total_cost, 2)
 
 
-def get_total_groups_cost(response, metric="UnblendedCost"):
+def get_total_groups_cost(response):
     cost_by_group = {}
-    for result in response.get("ResultsByTime"):
+    for result in response["ResultsByTime"]:
         for group in result["Groups"]:
-            if group["Keys"][0] not in cost_by_group:
-                cost_by_group[group["Keys"][0]] = 0
-            cost_by_group[group["Keys"][0]] += float(group["Metrics"][metric]["Amount"])
+            group_key = group["Keys"][0]
+            if group_key not in cost_by_group:
+                cost_by_group[group_key] = 0
+
+            cost_by_group[group_key] += float(
+                group["Metrics"]["UnblendedCost"]["Amount"]
+            )
     return {k: round(v, 2) for k, v in cost_by_group.items()}
+
+
+def get_dict_difference(d1, d2):
+    return {
+        k: d1.get(k, 0) - d2.get(k, 0) for k in set(d1.keys()).union(set(d2.keys()))
+    }
 
 
 def main(end_date):
@@ -122,16 +132,13 @@ def main(end_date):
     )
 
     difference_by_service = {
-        k: filtered_cost_by_service[k] - filtered_cost_by_service_last_week[k]
-        for k in filtered_cost_by_service.keys()
-        ## TODO: do i really need to check this? new aws services?
-        if k in filtered_cost_by_service_last_week
-    }
-
-    difference_by_service_sorted = {
         k: v
         for k, v in sorted(
-            difference_by_service.items(), key=lambda item: item[1], reverse=True
+            get_dict_difference(
+                filtered_cost_by_service, filtered_cost_by_service_last_week
+            ).items(),
+            key=lambda i: i[1],
+            reverse=True,
         )
     }
 
@@ -156,7 +163,7 @@ def main(end_date):
     )
 
     print("Difference between weeks by service with exclusions:\n")
-    for service, cost in difference_by_service_sorted.items():
+    for service, cost in difference_by_service.items():
         print(
             f"{service.removeprefix('AWS').removeprefix('Amazon').lstrip()}: ${cost:,.2f}"
         )
