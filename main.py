@@ -40,7 +40,9 @@ FILTER = {
 }
 
 
-def get_cost_and_usage(start_date, end_date, filter=None, group_by=None):
+def get_cost_and_usage(
+    start_date, end_date, filter=None, group_by=None, granularity="DAILY"
+):
     kwargs = {
         "TimePeriod": {
             # inclusive
@@ -48,7 +50,7 @@ def get_cost_and_usage(start_date, end_date, filter=None, group_by=None):
             # exclusive
             "End": end_date.strftime("%Y-%m-%d"),
         },
-        "Granularity": "DAILY",
+        "Granularity": granularity,
         "Metrics": ["UnblendedCost"],
     }
     if filter:
@@ -88,6 +90,11 @@ def get_dict_difference(d1, d2):
 def main(end_date):
     start_date = end_date - timedelta(days=7)
     start_date_last_week = start_date - timedelta(days=7)
+
+    first_day_of_year = datetime(end_date.year, 1, 1)
+    last_day_of_year = datetime(end_date.year, 12, 31)
+
+    weeks_left_in_year = round((last_day_of_year - end_date).days / 7, 2)
 
     filtered_total_cost = get_total_cost(
         get_cost_and_usage(start_date, end_date, FILTER)
@@ -142,6 +149,10 @@ def main(end_date):
         )
     }
 
+    ytd_unfiltered_cost = get_total_cost(
+        get_cost_and_usage(first_day_of_year, end_date, granularity="MONTHLY")
+    )
+
     print(
         f"Total cost from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} with exclusions: ${filtered_total_cost:,.2f}"
     )
@@ -167,6 +178,11 @@ def main(end_date):
         print(
             f"{service.removeprefix('AWS').removeprefix('Amazon').lstrip()}: ${cost:,.2f}"
         )
+
+    print(f"\nCurrent YTD cost: ${ytd_unfiltered_cost:,.2f}")
+    print(
+        f"Estimated year-end cost with {weeks_left_in_year} weeks left in year based on current week's cost with exclusions: ${ytd_unfiltered_cost + (weeks_left_in_year * filtered_total_cost):,.2f}"
+    )
 
 
 if __name__ == "__main__":
