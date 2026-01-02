@@ -1,7 +1,7 @@
 import argparse
 import json
 
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 
 import boto3
 
@@ -91,10 +91,12 @@ def main(end_date):
     start_date = end_date - timedelta(days=7)
     start_date_last_week = start_date - timedelta(days=7)
 
-    first_day_of_year = datetime(end_date.year, 1, 1)
-    last_day_of_year = datetime(end_date.year, 12, 31)
+    first_day_of_year = date(end_date.year, 1, 1)
+    last_day_of_year = date(end_date.year, 12, 31)
 
-    weeks_left_in_year = round((last_day_of_year - end_date).days / 7, 2)
+    weeks_left_in_year = round(
+        (last_day_of_year - (end_date - timedelta(days=1))).days / 7, 2
+    )
 
     filtered_total_cost = get_total_cost(
         get_cost_and_usage(start_date, end_date, FILTER)
@@ -189,8 +191,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--end-date",
-        type=lambda s: datetime.strptime(s, "%Y-%m-%d"),
-        default=datetime.today(),
+        type=lambda s: date.strftime(s, "%Y-%m-%d"),
+        default=date.today(),
     )
 
     main(parser.parse_args().end_date)
