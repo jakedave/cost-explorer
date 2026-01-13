@@ -191,7 +191,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--end-date",
-        type=lambda s: date.strftime(s, "%Y-%m-%d"),
+        type=lambda s: datetime.strptime(s, "%Y-%m-%d").date(),
         default=date.today(),
     )
 
