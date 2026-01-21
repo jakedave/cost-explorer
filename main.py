@@ -102,17 +102,18 @@ def main(end_date):
     start_date = end_date - timedelta(days=7)
     start_date_last_week = start_date - timedelta(days=7)
 
-    first_day_of_year = date(end_date.year, 1, 1)
-    last_day_of_year = date(end_date.year, 12, 31)
+    end_date_exclusive = end_date - timedelta(days=1)
+    start_date_exclusive = start_date - timedelta(days=1)
 
-    first_day_of_month = date(end_date.year, end_date.month, 1)
+    first_day_of_year = date(end_date_exclusive.year, 1, 1)
+    last_day_of_year = date(end_date_exclusive.year, 12, 31)
+
+    first_day_of_month = date(end_date_exclusive.year, end_date_exclusive.month, 1)
 
     ## end date is exclusive in cost calc
-    monthes_left_in_year = 12 - (end_date - timedelta(days=1)).month
+    monthes_left_in_year = 12 - end_date_exclusive.month
 
-    weeks_left_in_year = math.ceil(
-        (last_day_of_year - (end_date - timedelta(days=1))).days / 7
-    )
+    weeks_left_in_year = math.ceil((last_day_of_year - end_date_exclusive).days / 7)
 
     filtered_total_cost = get_total_cost(
         get_cost_and_usage(start_date, end_date, EXCLUSIONS_FILTER)
@@ -182,16 +183,16 @@ def main(end_date):
     )
 
     print(
-        f"Total cost from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} with exclusions: ${filtered_total_cost:,.2f}"
+        f"Total cost from {start_date.strftime('%Y-%m-%d')} to {end_date_exclusive.strftime('%Y-%m-%d')} with exclusions: ${filtered_total_cost:,.2f}"
     )
     print(
-        f"Total cost from {start_date_last_week.strftime('%Y-%m-%d')} to {start_date.strftime('%Y-%m-%d')} with exclusions: ${filtered_total_cost_last_week:,.2f}\n"
+        f"Total cost from {start_date_last_week.strftime('%Y-%m-%d')} to {start_date_exclusive.strftime('%Y-%m-%d')} with exclusions: ${filtered_total_cost_last_week:,.2f}\n"
     )
     print(
-        f"Total cost from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} without exclusions: ${unfiltered_total_cost:,.2f}"
+        f"Total cost from {start_date.strftime('%Y-%m-%d')} to {end_date_exclusive.strftime('%Y-%m-%d')} without exclusions: ${unfiltered_total_cost:,.2f}"
     )
     print(
-        f"Total cost from {start_date_last_week.strftime('%Y-%m-%d')} to {start_date.strftime('%Y-%m-%d')} without exclusions: ${unfiltered_total_cost_last_week:,.2f}\n"
+        f"Total cost from {start_date_last_week.strftime('%Y-%m-%d')} to {start_date_exclusive.strftime('%Y-%m-%d')} without exclusions: ${unfiltered_total_cost_last_week:,.2f}\n"
     )
 
     print(
