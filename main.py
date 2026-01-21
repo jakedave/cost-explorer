@@ -1,5 +1,6 @@
 import argparse
 import json
+import math
 
 from datetime import datetime, date, timedelta
 
@@ -7,36 +8,46 @@ import boto3
 
 client = boto3.client("ce")
 
-FILTER = {
+DIMENSION_RECORD_TYPE = {
+    "Dimensions": {
+        "Key": "RECORD_TYPE",
+        "Values": ["Support", "Tax"],
+        "MatchOptions": ["EQUALS"],
+    }
+}
+
+DIMENSION_SERVICE = {
+    "Dimensions": {
+        "Key": "SERVICE",
+        "Values": ["Advanced Reserved Instances Automation"],
+        "MatchOptions": ["EQUALS"],
+    }
+}
+
+DIMENSION_PURCHASE_TYPE = {
+    "Dimensions": {
+        "Key": "PURCHASE_TYPE",
+        "Values": ["Reserved"],
+        "MatchOptions": ["EQUALS"],
+    }
+}
+
+EXCLUSIONS_FILTER = {
     "And": [
         {
-            "Not": {
-                "Dimensions": {
-                    "Key": "RECORD_TYPE",
-                    "Values": ["Support", "Tax"],
-                    "MatchOptions": ["EQUALS"],
-                }
-            },
+            "Not": DIMENSION_RECORD_TYPE,
         },
         {
-            "Not": {
-                "Dimensions": {
-                    "Key": "SERVICE",
-                    "Values": ["Advanced Reserved Instances Automation"],
-                    "MatchOptions": ["EQUALS"],
-                },
-            }
+            "Not": DIMENSION_SERVICE,
         },
         {
-            "Not": {
-                "Dimensions": {
-                    "Key": "PURCHASE_TYPE",
-                    "Values": ["Reserved"],
-                    "MatchOptions": ["EQUALS"],
-                }
-            }
+            "Not": DIMENSION_PURCHASE_TYPE,
         },
     ]
+}
+
+INVERSE_EXCLUSIONS_FILTER = {
+    "Or": [DIMENSION_RECORD_TYPE, DIMENSION_SERVICE, DIMENSION_PURCHASE_TYPE]
 }
 
 
@@ -94,18 +105,23 @@ def main(end_date):
     first_day_of_year = date(end_date.year, 1, 1)
     last_day_of_year = date(end_date.year, 12, 31)
 
-    weeks_left_in_year = round(
-        (last_day_of_year - (end_date - timedelta(days=1))).days / 7, 2
+    first_day_of_month = date(end_date.year, end_date.month, 1)
+
+    monthes_left_in_year = 12 - end_date.month
+
+    ## end date is exclusive in cost calc
+    weeks_left_in_year = math.ceil(
+        (last_day_of_year - (end_date - timedelta(days=1))).days / 7
     )
 
     filtered_total_cost = get_total_cost(
-        get_cost_and_usage(start_date, end_date, FILTER)
+        get_cost_and_usage(start_date, end_date, EXCLUSIONS_FILTER)
     )
 
     unfiltered_total_cost = get_total_cost(get_cost_and_usage(start_date, end_date))
 
     filtered_total_cost_last_week = get_total_cost(
-        get_cost_and_usage(start_date_last_week, start_date, FILTER)
+        get_cost_and_usage(start_date_last_week, start_date, EXCLUSIONS_FILTER)
     )
 
     unfiltered_total_cost_last_week = get_total_cost(
@@ -116,7 +132,7 @@ def main(end_date):
         get_cost_and_usage(
             start_date,
             end_date,
-            filter=FILTER,
+            filter=EXCLUSIONS_FILTER,
             group_by=[
                 {
                     "Type": "DIMENSION",
@@ -130,7 +146,7 @@ def main(end_date):
         get_cost_and_usage(
             start_date_last_week,
             start_date,
-            filter=FILTER,
+            filter=EXCLUSIONS_FILTER,
             group_by=[
                 {
                     "Type": "DIMENSION",
@@ -153,6 +169,16 @@ def main(end_date):
 
     ytd_unfiltered_cost = get_total_cost(
         get_cost_and_usage(first_day_of_year, end_date, granularity="MONTHLY")
+    )
+
+    ## technically the same as mtd unfiltered - mtd filtered but requires one less api call
+    mtd_inverse_filtered_cost = get_total_cost(
+        get_cost_and_usage(
+            first_day_of_month,
+            end_date,
+            filter=INVERSE_EXCLUSIONS_FILTER,
+            granularity="MONTHLY",
+        )
     )
 
     print(
@@ -183,7 +209,7 @@ def main(end_date):
 
     print(f"\nCurrent YTD cost: ${ytd_unfiltered_cost:,.2f}")
     print(
-        f"Estimated year-end cost with {weeks_left_in_year} weeks left in year based on current week's cost with exclusions: ${ytd_unfiltered_cost + (weeks_left_in_year * filtered_total_cost):,.2f}"
+        f"Estimated year-end cost with {weeks_left_in_year} weeks left in year: ${ytd_unfiltered_cost + (weeks_left_in_year * filtered_total_cost) + (monthes_left_in_year * mtd_inverse_filtered_cost):,.2f}"
     )
 
 
