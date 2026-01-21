@@ -208,6 +208,7 @@ def main(end_date):
         )
 
     print(f"\nCurrent YTD cost: ${ytd_unfiltered_cost:,.2f}")
+    print(f"Current MTD inverse exclusions cost: ${mtd_inverse_filtered_cost:,.2f}")
     print(
         f"Estimated year-end cost with {weeks_left_in_year} weeks left in year: ${ytd_unfiltered_cost + (weeks_left_in_year * filtered_total_cost) + (monthes_left_in_year * mtd_inverse_filtered_cost):,.2f}"
     )
