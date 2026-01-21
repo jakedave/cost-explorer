@@ -56,9 +56,9 @@ def get_cost_and_usage(
 ):
     kwargs = {
         "TimePeriod": {
-            # inclusive
+            ## inclusive
             "Start": start_date.strftime("%Y-%m-%d"),
-            # exclusive
+            ## exclusive
             "End": end_date.strftime("%Y-%m-%d"),
         },
         "Granularity": granularity,
@@ -107,9 +107,9 @@ def main(end_date):
 
     first_day_of_month = date(end_date.year, end_date.month, 1)
 
-    monthes_left_in_year = 12 - end_date.month
-
     ## end date is exclusive in cost calc
+    monthes_left_in_year = 12 - (end_date - timedelta(days=1)).month
+
     weeks_left_in_year = math.ceil(
         (last_day_of_year - (end_date - timedelta(days=1))).days / 7
     )
