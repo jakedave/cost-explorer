@@ -111,7 +111,7 @@ def main(end_date):
     first_day_of_month = date(end_date_exclusive.year, end_date_exclusive.month, 1)
 
     ## end date is exclusive in cost calc
-    monthes_left_in_year = 12 - end_date_exclusive.month
+    monthes_left_in_year = 12 - end_date_exclusive.month + 1
 
     weeks_left_in_year = math.ceil((last_day_of_year - end_date_exclusive).days / 7)
 
