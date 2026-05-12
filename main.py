@@ -19,7 +19,7 @@ DIMENSION_RECORD_TYPE = {
 DIMENSION_SERVICE = {
     "Dimensions": {
         "Key": "SERVICE",
-        "Values": ["Advanced Reserved Instances Automation"],
+        "Values": ["Advanced Reserved Instances Automation", "Commitment Manager"],
         "MatchOptions": ["EQUALS"],
     }
 }
