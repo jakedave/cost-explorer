@@ -32,6 +32,14 @@ DIMENSION_PURCHASE_TYPE = {
     }
 }
 
+DIMENSION_BILLING_ENTITY = {
+    "Dimensions": {
+        "Key": "BILLING_ENTITY",
+        "Values": ["AWS Marketplace"],
+        "MatchOptions": ["EQUALS"],
+    }
+}
+
 EXCLUSIONS_FILTER = {
     "And": [
         {
@@ -43,11 +51,19 @@ EXCLUSIONS_FILTER = {
         {
             "Not": DIMENSION_PURCHASE_TYPE,
         },
+        {
+            "Not": DIMENSION_BILLING_ENTITY,
+        },
     ]
 }
 
 INVERSE_EXCLUSIONS_FILTER = {
-    "Or": [DIMENSION_RECORD_TYPE, DIMENSION_SERVICE, DIMENSION_PURCHASE_TYPE]
+    "Or": [
+        DIMENSION_RECORD_TYPE,
+        DIMENSION_SERVICE,
+        DIMENSION_PURCHASE_TYPE,
+        DIMENSION_BILLING_ENTITY,
+    ]
 }
 
 
