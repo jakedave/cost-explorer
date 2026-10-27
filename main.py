@@ -11,23 +11,7 @@ client = boto3.client("ce")
 DIMENSION_RECORD_TYPE = {
     "Dimensions": {
         "Key": "RECORD_TYPE",
-        "Values": ["Support", "Tax"],
-        "MatchOptions": ["EQUALS"],
-    }
-}
-
-DIMENSION_SERVICE = {
-    "Dimensions": {
-        "Key": "SERVICE",
-        "Values": ["Advanced Reserved Instances Automation", "Commitment Manager"],
-        "MatchOptions": ["EQUALS"],
-    }
-}
-
-DIMENSION_PURCHASE_TYPE = {
-    "Dimensions": {
-        "Key": "PURCHASE_TYPE",
-        "Values": ["Reserved"],
+        "Values": ["Usage"],
         "MatchOptions": ["EQUALS"],
     }
 }
@@ -35,37 +19,27 @@ DIMENSION_PURCHASE_TYPE = {
 DIMENSION_BILLING_ENTITY = {
     "Dimensions": {
         "Key": "BILLING_ENTITY",
-        "Values": ["AWS Marketplace"],
+        "Values": ["AWS"],
         "MatchOptions": ["EQUALS"],
     }
 }
 
-EXCLUSIONS_FILTER = {
+INCLUSIONS_FILTER = {
     "And": [
-        {
-            "Not": DIMENSION_RECORD_TYPE,
-        },
-        {
-            "Not": DIMENSION_SERVICE,
-        },
-        {
-            "Not": DIMENSION_PURCHASE_TYPE,
-        },
-        {
-            "Not": DIMENSION_BILLING_ENTITY,
-        },
-    ]
-}
-
-INVERSE_EXCLUSIONS_FILTER = {
-    "Or": [
         DIMENSION_RECORD_TYPE,
-        DIMENSION_SERVICE,
-        DIMENSION_PURCHASE_TYPE,
         DIMENSION_BILLING_ENTITY,
     ]
 }
 
+CREDIT_EXCLUSION_FILTER = {
+    "Not": {
+        "Dimensions": {
+            "Key": "RECORD_TYPE",
+            "Values": ["Credit"],
+            "MatchOptions": ["EQUALS"],
+        }
+    }
+}
 
 def get_cost_and_usage(
     start_date, end_date, filter=None, group_by=None, granularity="DAILY"
@@ -132,24 +106,24 @@ def main(end_date):
     weeks_left_in_year = math.ceil((last_day_of_year - end_date_exclusive).days / 7)
 
     filtered_total_cost = get_total_cost(
-        get_cost_and_usage(start_date, end_date, EXCLUSIONS_FILTER)
+        get_cost_and_usage(start_date, end_date, INCLUSIONS_FILTER)
     )
 
-    unfiltered_total_cost = get_total_cost(get_cost_and_usage(start_date, end_date))
+    unfiltered_total_cost = get_total_cost(get_cost_and_usage(start_date, end_date, CREDIT_EXCLUSION_FILTER))
 
     filtered_total_cost_last_week = get_total_cost(
-        get_cost_and_usage(start_date_last_week, start_date, EXCLUSIONS_FILTER)
+        get_cost_and_usage(start_date_last_week, start_date, INCLUSIONS_FILTER)
     )
 
     unfiltered_total_cost_last_week = get_total_cost(
-        get_cost_and_usage(start_date_last_week, start_date)
+        get_cost_and_usage(start_date_last_week, start_date, CREDIT_EXCLUSION_FILTER)
     )
 
     filtered_cost_by_service = get_total_groups_cost(
         get_cost_and_usage(
             start_date,
             end_date,
-            filter=EXCLUSIONS_FILTER,
+            filter=INCLUSIONS_FILTER,
             group_by=[
                 {
                     "Type": "DIMENSION",
@@ -163,7 +137,7 @@ def main(end_date):
         get_cost_and_usage(
             start_date_last_week,
             start_date,
-            filter=EXCLUSIONS_FILTER,
+            filter=INCLUSIONS_FILTER,
             group_by=[
                 {
                     "Type": "DIMENSION",
@@ -188,15 +162,24 @@ def main(end_date):
         get_cost_and_usage(first_day_of_year, end_date, granularity="MONTHLY")
     )
 
-    ## technically the same as mtd unfiltered - mtd filtered but requires one less api call
-    mtd_inverse_filtered_cost = get_total_cost(
+    mtd_inclusions_filtered_cost = get_total_cost(
         get_cost_and_usage(
             first_day_of_month,
             end_date,
-            filter=INVERSE_EXCLUSIONS_FILTER,
+            filter=INCLUSIONS_FILTER,
             granularity="MONTHLY",
         )
     )
+
+    mtd_unfiltered_cost = get_total_cost(
+        get_cost_and_usage(
+            first_day_of_month,
+            end_date,
+            filter=CREDIT_EXCLUSION_FILTER,
+            granularity="MONTHLY",
+        )
+    )
+    mtd_inverse_filtered_cost = mtd_unfiltered_cost - mtd_inclusions_filtered_cost
 
     print(
         f"Total cost from {start_date.strftime('%Y-%m-%d')} to {end_date_exclusive.strftime('%Y-%m-%d')} with exclusions: ${filtered_total_cost:,.2f}"
